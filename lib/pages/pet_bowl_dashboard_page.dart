@@ -4,8 +4,26 @@ import 'package:my_project/widgets/pet_bowl_card.dart';
 import 'package:my_project/widgets/pet_bowl_metric_tile.dart';
 import 'package:my_project/widgets/pet_bowl_section_header.dart';
 
-class PetBowlDashboardPage extends StatelessWidget {
+class PetBowlDashboardPage extends StatefulWidget {
   const PetBowlDashboardPage({super.key});
+
+  @override
+  State<PetBowlDashboardPage> createState() => _PetBowlDashboardPageState();
+}
+
+class _PetBowlDashboardPageState extends State<PetBowlDashboardPage> {
+  int _portionToday = 120;
+  int _waterLevel = 70;
+
+  String get _waterLabel {
+    if (_waterLevel > 65) {
+      return 'Comfortable ($_waterLevel%)';
+    }
+    if (_waterLevel > 35) {
+      return 'Moderate ($_waterLevel%)';
+    }
+    return 'Low ($_waterLevel%)';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,27 +82,62 @@ class PetBowlDashboardPage extends StatelessWidget {
           const SizedBox(height: 20),
           const PetBowlSectionHeader(
             title: 'At a glance',
-            subtitle: 'Placeholder metrics for your pet’s bowl.',
+            subtitle: 'Quick actions update these metrics.',
           ),
-          const PetBowlCard(
+          PetBowlCard(
             child: Column(
               children: [
                 PetBowlMetricTile(
                   icon: Icons.restaurant_rounded,
                   label: 'Portion today',
-                  value: '120 g (demo)',
+                  value: '$_portionToday g',
                 ),
-                Divider(height: 24),
+                const Divider(height: 24),
                 PetBowlMetricTile(
                   icon: Icons.opacity_rounded,
                   label: 'Water level',
-                  value: 'Comfortable (demo)',
+                  value: _waterLabel,
                 ),
-                Divider(height: 24),
-                PetBowlMetricTile(
-                  icon: Icons.event_repeat_rounded,
-                  label: 'Next scheduled meal',
-                  value: '18:00',
+                const Divider(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _portionToday += 10;
+                          });
+                        },
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('Feed +10g'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _waterLevel = (_waterLevel - 10).clamp(0, 100);
+                          });
+                        },
+                        icon: const Icon(Icons.water_drop_outlined),
+                        label: const Text('Use water'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _waterLevel = 100;
+                      });
+                    },
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Refill water'),
+                  ),
                 ),
               ],
             ),
