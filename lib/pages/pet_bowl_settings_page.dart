@@ -3,8 +3,18 @@ import 'package:my_project/widgets/pet_bowl_app_bar.dart';
 import 'package:my_project/widgets/pet_bowl_card.dart';
 import 'package:my_project/widgets/pet_bowl_section_header.dart';
 
-class PetBowlSettingsPage extends StatelessWidget {
+class PetBowlSettingsPage extends StatefulWidget {
   const PetBowlSettingsPage({super.key});
+
+  @override
+  State<PetBowlSettingsPage> createState() => _PetBowlSettingsPageState();
+}
+
+class _PetBowlSettingsPageState extends State<PetBowlSettingsPage> {
+  bool _mealReminders = true;
+  bool _lowLevelAlerts = false;
+  bool _connected = false;
+  String _petName = 'Mittens';
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +42,7 @@ class PetBowlSettingsPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Mittens',
+                        _petName,
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       Text(
@@ -50,7 +60,7 @@ class PetBowlSettingsPage extends StatelessWidget {
           const SizedBox(height: 20),
           const PetBowlSectionHeader(
             title: 'Device',
-            subtitle: 'Labels only — pairing comes later.',
+            subtitle: 'Use mock controls to update device state.',
           ),
           PetBowlCard(
             child: Column(
@@ -59,16 +69,37 @@ class PetBowlSettingsPage extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(Icons.wifi_rounded, color: scheme.primary),
                   title: const Text('Smart Pet Bowl · Kitchen'),
-                  subtitle: const Text('Not connected (mock)'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
+                  subtitle: Text(
+                    _connected ? 'Connected' : 'Not connected',
+                  ),
+                  trailing: FilledButton(
+                    onPressed: () {
+                      setState(() {
+                        _connected = !_connected;
+                      });
+                    },
+                    child: Text(_connected ? 'Disconnect' : 'Connect'),
+                  ),
                 ),
                 Divider(height: 1, color: scheme.outlineVariant),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(Icons.memory_rounded, color: scheme.primary),
                   title: const Text('Firmware'),
-                  subtitle: const Text('v0.0.0-demo'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
+                  subtitle: Text(_connected ? 'v0.0.1-mock' : 'Unavailable'),
+                  trailing: IconButton(
+                    onPressed: () async {
+                      final newName = await _showPetNameDialog();
+                      if (!mounted || newName == null) {
+                        return;
+                      }
+                      setState(() {
+                        _petName = newName;
+                      });
+                    },
+                    icon: const Icon(Icons.edit_rounded),
+                    tooltip: 'Rename pet',
+                  ),
                 ),
               ],
             ),
@@ -81,20 +112,28 @@ class PetBowlSettingsPage extends StatelessWidget {
           PetBowlCard(
             child: Column(
               children: [
-                const SwitchListTile(
+                SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Meal reminders'),
-                  subtitle: Text('Notify before scheduled feed'),
-                  value: true,
-                  onChanged: null,
+                  title: const Text('Meal reminders'),
+                  subtitle: const Text('Notify before scheduled feed'),
+                  value: _mealReminders,
+                  onChanged: (value) {
+                    setState(() {
+                      _mealReminders = value;
+                    });
+                  },
                 ),
                 Divider(height: 1, color: scheme.outlineVariant),
-                const SwitchListTile(
+                SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Low food / water'),
-                  subtitle: Text('Alert when sensors report low'),
-                  value: false,
-                  onChanged: null,
+                  title: const Text('Low food / water'),
+                  subtitle: const Text('Alert when sensors report low'),
+                  value: _lowLevelAlerts,
+                  onChanged: (value) {
+                    setState(() {
+                      _lowLevelAlerts = value;
+                    });
+                  },
                 ),
               ],
             ),
@@ -102,5 +141,39 @@ class PetBowlSettingsPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<String?> _showPetNameDialog() async {
+    final controller = TextEditingController(text: _petName);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Rename pet'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(labelText: 'Pet name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final value = controller.text.trim();
+                if (value.isEmpty) {
+                  return;
+                }
+                Navigator.of(context).pop(value);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+    return result;
   }
 }

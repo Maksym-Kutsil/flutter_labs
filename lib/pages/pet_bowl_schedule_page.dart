@@ -4,8 +4,16 @@ import 'package:my_project/widgets/pet_bowl_card.dart';
 import 'package:my_project/widgets/pet_bowl_schedule_row.dart';
 import 'package:my_project/widgets/pet_bowl_section_header.dart';
 
-class PetBowlSchedulePage extends StatelessWidget {
+class PetBowlSchedulePage extends StatefulWidget {
   const PetBowlSchedulePage({super.key});
+
+  @override
+  State<PetBowlSchedulePage> createState() => _PetBowlSchedulePageState();
+}
+
+class _PetBowlSchedulePageState extends State<PetBowlSchedulePage> {
+  bool _weekendSnackEnabled = false;
+  int _extraPortion = 15;
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +24,7 @@ class PetBowlSchedulePage extends StatelessWidget {
         children: [
           const PetBowlSectionHeader(
             title: 'Daily meals',
-            subtitle: 'Static preview — timers not active.',
+            subtitle: 'Simulate schedule adjustments for this week.',
           ),
           const PetBowlCard(
             child: Column(
@@ -41,15 +49,38 @@ class PetBowlSchedulePage extends StatelessWidget {
           const SizedBox(height: 20),
           const PetBowlSectionHeader(
             title: 'Weekend tweak',
-            subtitle: 'Optional second dinner on Sat/Sun (UI only).',
+            subtitle: 'Enable or update optional snack portion.',
           ),
-          const PetBowlCard(
+          PetBowlCard(
             child: Column(
               children: [
                 PetBowlScheduleRow(
                   timeLabel: '21:00 · Sat & Sun',
-                  portionLabel: 'Light snack · 15 g',
-                  enabled: false,
+                  portionLabel: 'Light snack · $_extraPortion g',
+                  enabled: _weekendSnackEnabled,
+                ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Enable weekend snack'),
+                  value: _weekendSnackEnabled,
+                  onChanged: (value) {
+                    setState(() {
+                      _weekendSnackEnabled = value;
+                    });
+                  },
+                ),
+                Slider(
+                  value: _extraPortion.toDouble(),
+                  min: 5,
+                  max: 40,
+                  divisions: 7,
+                  label: '$_extraPortion g',
+                  onChanged: (value) {
+                    setState(() {
+                      _extraPortion = value.toInt();
+                    });
+                  },
                 ),
               ],
             ),
