@@ -9,6 +9,7 @@ class LocalAuthRepository implements AuthRepository {
 
   static const String _userKey = 'registered_user';
   static const String _passwordKey = 'registered_password';
+  static const String _sessionKey = 'active_session_email';
 
   final KeyValueStorage _storage;
 
@@ -53,5 +54,24 @@ class LocalAuthRepository implements AuthRepository {
   Future<void> updateUser(AppUser user) async {
     final userJson = jsonEncode(user.toJson());
     await _storage.setString(_userKey, userJson);
+  }
+
+  @override
+  Future<void> saveSession(String email) async {
+    await _storage.setString(_sessionKey, email);
+  }
+
+  @override
+  Future<String?> getSessionEmail() async {
+    final email = await _storage.getString(_sessionKey);
+    if (email == null || email.isEmpty) {
+      return null;
+    }
+    return email;
+  }
+
+  @override
+  Future<void> clearSession() async {
+    await _storage.remove(_sessionKey);
   }
 }

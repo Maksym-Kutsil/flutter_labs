@@ -17,7 +17,11 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    return _repository.login(email: email, password: password);
+    final user = await _repository.login(email: email, password: password);
+    if (user != null) {
+      await _repository.saveSession(user.email);
+    }
+    return user;
   }
 
   Future<AppUser?> getRegisteredUser() async {
@@ -26,5 +30,24 @@ class AuthService {
 
   Future<void> updateUser(AppUser user) async {
     await _repository.updateUser(user);
+  }
+
+  /// Returns the active session's user if a session is saved and the
+  /// registered user still matches, otherwise returns `null`.
+  Future<AppUser?> restoreSession() async {
+    final sessionEmail = await _repository.getSessionEmail();
+    if (sessionEmail == null) {
+      return null;
+    }
+    final user = await _repository.getRegisteredUser();
+    if (user == null || user.email != sessionEmail) {
+      await _repository.clearSession();
+      return null;
+    }
+    return user;
+  }
+
+  Future<void> logout() async {
+    await _repository.clearSession();
   }
 }

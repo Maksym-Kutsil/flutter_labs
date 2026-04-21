@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:my_project/application/services/auth_service.dart';
 import 'package:my_project/application/services/bowl_entry_service.dart';
+import 'package:my_project/application/services/connectivity_service.dart';
+import 'package:my_project/application/services/mqtt_sensor_service.dart';
 import 'package:my_project/domain/models/app_user.dart';
 import 'package:my_project/domain/models/bowl_entry.dart';
 import 'package:my_project/features/auth/login_page.dart';
@@ -13,12 +15,16 @@ class HomePage extends StatefulWidget {
   const HomePage({
     required this.authService,
     required this.bowlEntryService,
+    required this.connectivityService,
+    required this.mqttSensorService,
     required this.user,
     super.key,
   });
 
   final AuthService authService;
   final BowlEntryService bowlEntryService;
+  final ConnectivityService connectivityService;
+  final MqttSensorService mqttSensorService;
   final AppUser user;
 
   @override
@@ -77,10 +83,7 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Profile',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text('Profile', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           Text('Name: ${_user.name}'),
           Text('Email: ${_user.email}'),
@@ -159,9 +162,7 @@ class _HomePageState extends State<HomePage> {
     await _loadEntries();
   }
 
-  Future<BowlEntry?> _showEntryDialog({
-    BowlEntry? initialEntry,
-  }) async {
+  Future<BowlEntry?> _showEntryDialog({BowlEntry? initialEntry}) async {
     final result = await showDialog<BowlEntry>(
       context: context,
       builder: (context) {
@@ -185,10 +186,7 @@ class _HomePageState extends State<HomePage> {
     final updatedUser = await Navigator.of(context).push<AppUser>(
       MaterialPageRoute<AppUser>(
         builder: (context) {
-          return ProfilePage(
-            authService: widget.authService,
-            user: _user,
-          );
+          return ProfilePage(authService: widget.authService, user: _user);
         },
       ),
     );
@@ -201,16 +199,47 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _logout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Confirm logout'),
+          content: const Text(
+            'Are you sure you want to log out? You will need to sign in '
+            'again next time.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+    if (shouldLogout != true) {
+      return;
+    }
+
+    await widget.authService.logout();
+    await widget.mqttSensorService.disconnect();
     if (!mounted) {
       return;
     }
-    Navigator.of(context).pushReplacement(
+    await Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute<void>(
         builder: (context) => LoginPage(
           authService: widget.authService,
           bowlEntryService: widget.bowlEntryService,
+          connectivityService: widget.connectivityService,
+          mqttSensorService: widget.mqttSensorService,
         ),
       ),
+      (route) => false,
     );
   }
 }
