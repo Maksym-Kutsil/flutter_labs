@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:mqtt_client/mqtt_browser_client.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 
@@ -189,6 +190,13 @@ class MqttSensorService {
     String clientId,
     int port,
   ) {
+    if (kIsWeb) {
+      final webSocketUrl = 'wss://$server:8884/mqtt';
+      final client = MqttBrowserClient(webSocketUrl, clientId)
+        ..websocketProtocols = ['mqtt']
+        ..port = 8884;
+      return client;
+    }
     return MqttServerClient(server, clientId)..port = port;
   }
 }
