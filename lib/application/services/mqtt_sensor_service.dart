@@ -49,14 +49,14 @@ class MqttSensorState {
 typedef MqttClientFactory =
     MqttClient Function(String server, String clientId, int port);
 
-/// Service that manages an MQTT connection and exposes the latest sensor
-/// readings via a [ValueNotifier]. Designed to be lazily started and safely
-/// restarted after a disconnect.
+/// Service that manages an MQTT connection and exposes the latest numeric
+/// reading (for example bowl weight in grams) via a [ValueNotifier]. Designed
+/// to be lazily started and safely restarted after a disconnect.
 class MqttSensorService {
   MqttSensorService({
     this.broker = 'broker.hivemq.com',
     this.port = 1883,
-    this.topic = 'sensor/temperature',
+    this.topic = 'smartpetbowl/bowl/grams',
     String? clientId,
     MqttClientFactory? clientFactory,
   }) : clientId =

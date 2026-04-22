@@ -43,7 +43,7 @@ class _SensorPageState extends State<SensorPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('MQTT sensor')),
+      appBar: AppBar(title: const Text('MQTT bowl scale')),
       body: ValueListenableBuilder<MqttSensorState>(
         valueListenable: widget.mqttSensorService.state,
         builder: (context, state, _) {
@@ -211,13 +211,13 @@ class _TemperatureCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Latest temperature', style: theme.textTheme.titleMedium),
+            Text('Latest bowl weight', style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Icon(
-                  Icons.thermostat_rounded,
+                  Icons.monitor_weight_rounded,
                   size: 48,
                   color: theme.colorScheme.primary,
                 ),
@@ -226,7 +226,7 @@ class _TemperatureCard extends StatelessWidget {
                   child: Text(
                     temperature == null
                         ? '—'
-                        : '${temperature.toStringAsFixed(1)} °C',
+                        : '${temperature.toStringAsFixed(1)} g',
                     style: theme.textTheme.displaySmall,
                   ),
                 ),
