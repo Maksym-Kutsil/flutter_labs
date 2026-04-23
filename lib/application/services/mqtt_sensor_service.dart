@@ -35,40 +35,80 @@ class MqttSensorState {
     String? errorMessage,
     bool clearError = false,
     bool clearPayload = false,
+    bool clearTemperature = false,
+    bool clearLastUpdated = false,
   }) {
     return MqttSensorState(
       status: status ?? this.status,
-      temperatureCelsius: temperatureCelsius ?? this.temperatureCelsius,
+      temperatureCelsius: clearTemperature
+          ? null
+          : (temperatureCelsius ?? this.temperatureCelsius),
       lastPayload: clearPayload ? null : (lastPayload ?? this.lastPayload),
-      lastUpdated: lastUpdated ?? this.lastUpdated,
+      lastUpdated: clearLastUpdated ? null : (lastUpdated ?? this.lastUpdated),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
 }
 
 typedef MqttClientFactory =
-    MqttClient Function(String server, String clientId, int port);
+    MqttClient Function(
+      String server,
+      String clientId,
+      int port,
+      int webSocketPort,
+    );
+
+enum MqttBrokerPreset {
+  hiveMq(
+    label: 'HiveMQ',
+    server: 'broker.hivemq.com',
+    port: 1883,
+    webSocketPort: 8884,
+  ),
+  emqx(
+    label: 'EMQX',
+    server: 'broker.emqx.io',
+    port: 1883,
+    webSocketPort: 8084,
+  );
+
+  const MqttBrokerPreset({
+    required this.label,
+    required this.server,
+    required this.port,
+    required this.webSocketPort,
+  });
+
+  final String label;
+  final String server;
+  final int port;
+  final int webSocketPort;
+}
 
 /// Service that manages an MQTT connection and exposes the latest numeric
 /// reading (for example bowl weight in grams) via a [ValueNotifier]. Designed
 /// to be lazily started and safely restarted after a disconnect.
 class MqttSensorService {
   MqttSensorService({
-    this.broker = 'broker.hivemq.com',
-    this.port = 1883,
+    MqttBrokerPreset brokerPreset = MqttBrokerPreset.hiveMq,
     this.topic = 'smartpetbowl/bowl/grams',
     String? clientId,
     MqttClientFactory? clientFactory,
   }) : clientId =
            clientId ??
            'flutter_pet_bowl_${DateTime.now().millisecondsSinceEpoch}',
-       _clientFactory = clientFactory ?? _defaultClientFactory;
+       _clientFactory = clientFactory ?? _defaultClientFactory,
+       _selectedBroker = brokerPreset;
 
-  final String broker;
-  final int port;
   final String topic;
   final String clientId;
   final MqttClientFactory _clientFactory;
+  MqttBrokerPreset _selectedBroker;
+
+  MqttBrokerPreset get selectedBroker => _selectedBroker;
+  String get broker => _selectedBroker.server;
+  int get port => _selectedBroker.port;
+  int get webSocketPort => _selectedBroker.webSocketPort;
 
   final ValueNotifier<MqttSensorState> state = ValueNotifier<MqttSensorState>(
     MqttSensorState.initial,
@@ -76,6 +116,14 @@ class MqttSensorService {
 
   MqttClient? _client;
   StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? _subscription;
+
+  Future<void> switchBroker(MqttBrokerPreset brokerPreset) async {
+    if (brokerPreset == _selectedBroker) {
+      return;
+    }
+    await disconnect();
+    _selectedBroker = brokerPreset;
+  }
 
   Future<void> connect() async {
     final current = state.value.status;
@@ -89,7 +137,7 @@ class MqttSensorService {
       clearError: true,
     );
 
-    final client = _clientFactory(broker, clientId, port)
+    final client = _clientFactory(broker, clientId, port, webSocketPort)
       ..logging(on: false)
       ..keepAlivePeriod = 20
       ..autoReconnect = true
@@ -142,6 +190,9 @@ class MqttSensorService {
     state.value = state.value.copyWith(
       status: MqttSensorStatus.disconnected,
       clearError: true,
+      clearPayload: true,
+      clearTemperature: true,
+      clearLastUpdated: true,
     );
   }
 
@@ -189,12 +240,13 @@ class MqttSensorService {
     String server,
     String clientId,
     int port,
+    int webSocketPort,
   ) {
     if (kIsWeb) {
-      final webSocketUrl = 'wss://$server:8884/mqtt';
+      final webSocketUrl = 'wss://$server:$webSocketPort/mqtt';
       final client = MqttBrowserClient(webSocketUrl, clientId)
         ..websocketProtocols = ['mqtt']
-        ..port = 8884;
+        ..port = webSocketPort;
       return client;
     }
     return MqttServerClient(server, clientId)..port = port;

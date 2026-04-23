@@ -28,6 +28,14 @@ class _SensorPageState extends State<SensorPage> {
     widget.mqttSensorService.connect();
   }
 
+  Future<void> _switchBroker(MqttBrokerPreset broker) async {
+    await widget.mqttSensorService.switchBroker(broker);
+    if (!mounted || !widget.isOnline) {
+      return;
+    }
+    unawaitedConnect();
+  }
+
   @override
   void didUpdateWidget(covariant SensorPage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -55,6 +63,8 @@ class _SensorPageState extends State<SensorPage> {
                 isOnline: widget.isOnline,
                 onReconnect: widget.isOnline ? unawaitedConnect : null,
                 onDisconnect: () => widget.mqttSensorService.disconnect(),
+                selectedBroker: widget.mqttSensorService.selectedBroker,
+                onBrokerChanged: _switchBroker,
                 broker: widget.mqttSensorService.broker,
                 topic: widget.mqttSensorService.topic,
               ),
@@ -74,6 +84,8 @@ class _StatusCard extends StatelessWidget {
     required this.isOnline,
     required this.onReconnect,
     required this.onDisconnect,
+    required this.selectedBroker,
+    required this.onBrokerChanged,
     required this.broker,
     required this.topic,
   });
@@ -82,6 +94,8 @@ class _StatusCard extends StatelessWidget {
   final bool isOnline;
   final VoidCallback? onReconnect;
   final VoidCallback onDisconnect;
+  final MqttBrokerPreset selectedBroker;
+  final ValueChanged<MqttBrokerPreset> onBrokerChanged;
   final String broker;
   final String topic;
 
@@ -102,6 +116,29 @@ class _StatusCard extends StatelessWidget {
                   child: Text(_statusText, style: theme.textTheme.titleMedium),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<MqttBrokerPreset>(
+              initialValue: selectedBroker,
+              decoration: const InputDecoration(
+                labelText: 'MQTT broker',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: MqttBrokerPreset.values
+                  .map(
+                    (broker) => DropdownMenuItem<MqttBrokerPreset>(
+                      value: broker,
+                      child: Text('${broker.label} (${broker.server})'),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value == null) {
+                  return;
+                }
+                onBrokerChanged(value);
+              },
             ),
             const SizedBox(height: 8),
             Text('Broker: $broker'),
