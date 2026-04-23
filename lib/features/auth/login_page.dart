@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:my_project/application/services/auth_service.dart';
 import 'package:my_project/application/services/bowl_entry_service.dart';
+import 'package:my_project/application/services/connectivity_service.dart';
+import 'package:my_project/application/services/mqtt_sensor_service.dart';
 import 'package:my_project/core/validation/input_validators.dart';
 import 'package:my_project/features/app/authenticated_shell_page.dart';
 import 'package:my_project/features/auth/register_page.dart';
@@ -9,11 +11,15 @@ class LoginPage extends StatefulWidget {
   const LoginPage({
     required this.authService,
     required this.bowlEntryService,
+    required this.connectivityService,
+    required this.mqttSensorService,
     super.key,
   });
 
   final AuthService authService;
   final BowlEntryService bowlEntryService;
+  final ConnectivityService connectivityService;
+  final MqttSensorService mqttSensorService;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -48,9 +54,7 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   TextFormField(
                     controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Email'),
                     validator: (value) {
                       return InputValidators.validateEmail(value ?? '');
                     },
@@ -58,9 +62,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _passwordController,
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Password'),
                     obscureText: true,
                     validator: (value) {
                       return InputValidators.validatePassword(value ?? '');
@@ -98,6 +100,24 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
 
+    final isOnline = await widget.connectivityService.isOnline();
+    if (!mounted) {
+      return;
+    }
+    if (!isOnline) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No internet connection. Please connect and try again.',
+          ),
+        ),
+      );
+      return;
+    }
+
     final user = await widget.authService.login(
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
@@ -114,17 +134,21 @@ class _LoginPageState extends State<LoginPage> {
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Login failed. Check email/password or register first.'),
+          content: Text(
+            'Login failed. Check email/password or register first.',
+          ),
         ),
       );
       return;
     }
 
-    Navigator.of(context).pushReplacement(
+    await Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
         builder: (context) => AuthenticatedShellPage(
           authService: widget.authService,
           bowlEntryService: widget.bowlEntryService,
+          connectivityService: widget.connectivityService,
+          mqttSensorService: widget.mqttSensorService,
           user: user,
         ),
       ),

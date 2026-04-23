@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_project/application/services/auth_service.dart';
 import 'package:my_project/application/services/bowl_entry_service.dart';
+import 'package:my_project/application/services/connectivity_service.dart';
+import 'package:my_project/application/services/mqtt_sensor_service.dart';
 import 'package:my_project/domain/models/app_user.dart';
 import 'package:my_project/domain/models/bowl_entry.dart';
 import 'package:my_project/domain/repositories/auth_repository.dart';
@@ -8,7 +10,9 @@ import 'package:my_project/domain/repositories/bowl_entry_repository.dart';
 import 'package:my_project/main.dart';
 
 void main() {
-  testWidgets('Smart Pet Bowl home smoke test', (WidgetTester tester) async {
+  testWidgets('Smart Pet Bowl shows login when no session exists', (
+    WidgetTester tester,
+  ) async {
     final authService = AuthService(_InMemoryAuthRepository());
     final bowlEntryService = BowlEntryService(_InMemoryBowlEntryRepository());
 
@@ -16,6 +20,8 @@ void main() {
       MyApp(
         authService: authService,
         bowlEntryService: bowlEntryService,
+        connectivityService: _FakeConnectivityService(),
+        mqttSensorService: MqttSensorService(),
       ),
     );
     await tester.pumpAndSettle();
@@ -28,6 +34,7 @@ void main() {
 class _InMemoryAuthRepository implements AuthRepository {
   AppUser? _user;
   String? _password;
+  String? _sessionEmail;
 
   @override
   Future<AppUser?> getRegisteredUser() async => _user;
@@ -58,6 +65,19 @@ class _InMemoryAuthRepository implements AuthRepository {
   @override
   Future<void> updateUser(AppUser user) async {
     _user = user;
+  }
+
+  @override
+  Future<void> saveSession(String email) async {
+    _sessionEmail = email;
+  }
+
+  @override
+  Future<String?> getSessionEmail() async => _sessionEmail;
+
+  @override
+  Future<void> clearSession() async {
+    _sessionEmail = null;
   }
 }
 
@@ -92,4 +112,12 @@ class _InMemoryBowlEntryRepository implements BowlEntryRepository {
     }
     _entries[index] = entry;
   }
+}
+
+class _FakeConnectivityService implements ConnectivityService {
+  @override
+  Future<bool> isOnline() async => true;
+
+  @override
+  Stream<bool> get onlineStream => const Stream<bool>.empty();
 }
