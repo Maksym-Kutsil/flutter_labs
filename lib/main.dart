@@ -4,16 +4,39 @@ import 'package:my_project/application/services/bowl_entry_service.dart';
 import 'package:my_project/application/services/connectivity_service.dart';
 import 'package:my_project/application/services/mqtt_sensor_service.dart';
 import 'package:my_project/data/local/shared_prefs_storage.dart';
+import 'package:my_project/data/remote/api_client.dart';
+import 'package:my_project/data/remote/auth_api.dart';
+import 'package:my_project/data/remote/bowl_entry_api.dart';
+import 'package:my_project/data/repositories/cached_bowl_entry_repository.dart';
 import 'package:my_project/data/repositories/local_auth_repository.dart';
 import 'package:my_project/data/repositories/local_bowl_entry_repository.dart';
+import 'package:my_project/data/repositories/remote_auth_repository.dart';
 import 'package:my_project/features/bootstrap/bootstrap_page.dart';
 import 'package:my_project/theme/pet_bowl_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final storage = await SharedPrefsStorage.create();
-  final authService = AuthService(LocalAuthRepository(storage));
-  final bowlEntryService = BowlEntryService(LocalBowlEntryRepository(storage));
+
+  final apiClient = ApiClient();
+  final authApi = AuthApi(apiClient);
+  final bowlEntryApi = BowlEntryApi(apiClient);
+
+  final remoteAuthRepository = RemoteAuthRepository(
+    authApi: authApi,
+    apiClient: apiClient,
+    localRepository: LocalAuthRepository(storage),
+    storage: storage,
+  );
+  await remoteAuthRepository.restoreAuthToken();
+
+  final bowlEntryRepository = CachedBowlEntryRepository(
+    api: bowlEntryApi,
+    localRepository: LocalBowlEntryRepository(storage),
+  );
+
+  final authService = AuthService(remoteAuthRepository);
+  final bowlEntryService = BowlEntryService(bowlEntryRepository);
   final connectivityService = ConnectivityService();
   final mqttSensorService = MqttSensorService();
 
