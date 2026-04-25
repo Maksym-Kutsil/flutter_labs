@@ -5,10 +5,9 @@ import 'package:my_project/application/services/connectivity_service.dart';
 import 'package:my_project/application/services/mqtt_sensor_service.dart';
 import 'package:my_project/domain/models/app_user.dart';
 import 'package:my_project/domain/models/bowl_entry.dart';
-import 'package:my_project/features/auth/login_page.dart';
-import 'package:my_project/features/home/widgets/bowl_entry_tile.dart';
-import 'package:my_project/features/home/widgets/entry_editor_dialog.dart';
-import 'package:my_project/features/home/widgets/section_card.dart';
+import 'package:my_project/features/home/home_actions.dart';
+import 'package:my_project/features/home/widgets/bowl_entries_section.dart';
+import 'package:my_project/features/home/widgets/profile_summary_card.dart';
 import 'package:my_project/features/profile/profile_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -32,16 +31,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late AppUser _user;
-  List<BowlEntry> _entries = <BowlEntry>[];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _user = widget.user;
-    _loadEntries();
-  }
+  late AppUser _user = widget.user;
+  late final HomeActions _actions = HomeActions(
+    authService: widget.authService,
+    bowlEntryService: widget.bowlEntryService,
+    connectivityService: widget.connectivityService,
+    mqttSensorService: widget.mqttSensorService,
+  );
+  Object _refreshToken = Object();
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +46,11 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: Text('Smart Bowl - ${_user.email}'),
         actions: [
+          IconButton(
+            onPressed: _refreshEntries,
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh from API',
+          ),
           IconButton(
             onPressed: _openEditProfile,
             icon: const Icon(Icons.person_rounded),
@@ -61,16 +63,20 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildProfileCard(),
-                const SizedBox(height: 16),
-                _buildEntriesCard(),
-              ],
-            ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          ProfileSummaryCard(user: _user),
+          const SizedBox(height: 16),
+          BowlEntriesSection(
+            bowlEntryService: widget.bowlEntryService,
+            refreshToken: _refreshToken,
+            onEdit: _editEntry,
+            onDelete: _deleteEntry,
+            onClear: _clearEntries,
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addEntry,
         child: const Icon(Icons.add_rounded),
@@ -78,168 +84,61 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildProfileCard() {
-    return SectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Profile', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text('Name: ${_user.name}'),
-          Text('Email: ${_user.email}'),
-          Text('Pet: ${_user.petName}'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEntriesCard() {
-    return SectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Feeding entries',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              TextButton(
-                onPressed: _entries.isEmpty ? null : _clearEntries,
-                child: const Text('Delete all'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (_entries.isEmpty)
-            const Text('No entries yet. Tap + to add.')
-          else
-            ..._entries.map((entry) {
-              return Column(
-                children: [
-                  BowlEntryTile(
-                    entry: entry,
-                    onEdit: () => _editEntry(entry),
-                    onDelete: () => _deleteEntry(entry.id),
-                  ),
-                  const Divider(height: 1),
-                ],
-              );
-            }),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _loadEntries() async {
-    final entries = await widget.bowlEntryService.getEntries();
-    if (!mounted) {
-      return;
-    }
+  void _refreshEntries() {
     setState(() {
-      _entries = entries;
-      _isLoading = false;
+      _refreshToken = Object();
     });
   }
 
   Future<void> _addEntry() async {
-    final createdEntry = await _showEntryDialog();
-    if (createdEntry == null) {
+    final created = await _actions.showEntryDialog(context);
+    if (created == null) {
       return;
     }
-    await widget.bowlEntryService.addEntry(createdEntry);
-    await _loadEntries();
+    await widget.bowlEntryService.addEntry(created);
+    _refreshEntries();
   }
 
   Future<void> _editEntry(BowlEntry entry) async {
-    final updatedEntry = await _showEntryDialog(initialEntry: entry);
-    if (updatedEntry == null) {
+    final updated = await _actions.showEntryDialog(
+      context,
+      initialEntry: entry,
+    );
+    if (updated == null) {
       return;
     }
-    await widget.bowlEntryService.updateEntry(updatedEntry);
-    await _loadEntries();
-  }
-
-  Future<BowlEntry?> _showEntryDialog({BowlEntry? initialEntry}) async {
-    final result = await showDialog<BowlEntry>(
-      context: context,
-      builder: (context) {
-        return EntryEditorDialog(initialEntry: initialEntry);
-      },
-    );
-    return result;
+    await widget.bowlEntryService.updateEntry(updated);
+    _refreshEntries();
   }
 
   Future<void> _deleteEntry(String id) async {
     await widget.bowlEntryService.deleteEntry(id);
-    await _loadEntries();
+    _refreshEntries();
   }
 
   Future<void> _clearEntries() async {
     await widget.bowlEntryService.clearEntries();
-    await _loadEntries();
+    _refreshEntries();
   }
 
   Future<void> _openEditProfile() async {
-    final updatedUser = await Navigator.of(context).push<AppUser>(
+    final updated = await Navigator.of(context).push<AppUser>(
       MaterialPageRoute<AppUser>(
-        builder: (context) {
-          return ProfilePage(authService: widget.authService, user: _user);
-        },
+        builder: (context) =>
+            ProfilePage(authService: widget.authService, user: _user),
       ),
     );
-    if (!mounted || updatedUser == null) {
+    if (!mounted || updated == null) {
       return;
     }
-    setState(() {
-      _user = updatedUser;
-    });
+    setState(() => _user = updated);
   }
 
   Future<void> _logout() async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Confirm logout'),
-          content: const Text(
-            'Are you sure you want to log out? You will need to sign in '
-            'again next time.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Logout'),
-            ),
-          ],
-        );
-      },
-    );
-    if (shouldLogout != true) {
+    final confirmed = await _actions.confirmLogout(context);
+    if (!confirmed || !mounted) {
       return;
     }
-
-    await widget.authService.logout();
-    await widget.mqttSensorService.disconnect();
-    if (!mounted) {
-      return;
-    }
-    await Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(
-        builder: (context) => LoginPage(
-          authService: widget.authService,
-          bowlEntryService: widget.bowlEntryService,
-          connectivityService: widget.connectivityService,
-          mqttSensorService: widget.mqttSensorService,
-        ),
-      ),
-      (route) => false,
-    );
+    await _actions.performLogout(context);
   }
 }
