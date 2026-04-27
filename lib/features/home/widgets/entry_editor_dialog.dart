@@ -3,10 +3,7 @@ import 'package:my_project/core/validation/input_validators.dart';
 import 'package:my_project/domain/models/bowl_entry.dart';
 
 class EntryEditorDialog extends StatefulWidget {
-  const EntryEditorDialog({
-    this.initialEntry,
-    super.key,
-  });
+  const EntryEditorDialog({this.initialEntry, super.key});
 
   final BowlEntry? initialEntry;
 
@@ -24,15 +21,11 @@ class _EntryEditorDialogState extends State<EntryEditorDialog> {
   void initState() {
     super.initState();
     final initialEntry = widget.initialEntry;
-    _titleController = TextEditingController(
-      text: initialEntry?.title ?? '',
-    );
+    _titleController = TextEditingController(text: initialEntry?.title ?? '');
     _portionController = TextEditingController(
       text: initialEntry?.portionGrams.toString() ?? '',
     );
-    _noteController = TextEditingController(
-      text: initialEntry?.note ?? '',
-    );
+    _noteController = TextEditingController(text: initialEntry?.note ?? '');
   }
 
   @override
@@ -57,9 +50,7 @@ class _EntryEditorDialogState extends State<EntryEditorDialog> {
             children: [
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Title',
-                ),
+                decoration: const InputDecoration(labelText: 'Title'),
                 validator: (value) {
                   return InputValidators.validateEntryTitle(value ?? '');
                 },
@@ -67,9 +58,7 @@ class _EntryEditorDialogState extends State<EntryEditorDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _portionController,
-                decoration: const InputDecoration(
-                  labelText: 'Portion (grams)',
-                ),
+                decoration: const InputDecoration(labelText: 'Portion (grams)'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   return InputValidators.validatePortion(value ?? '');
@@ -78,9 +67,7 @@ class _EntryEditorDialogState extends State<EntryEditorDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _noteController,
-                decoration: const InputDecoration(
-                  labelText: 'Note (optional)',
-                ),
+                decoration: const InputDecoration(labelText: 'Note (optional)'),
                 maxLines: 2,
               ),
             ],
@@ -92,10 +79,7 @@ class _EntryEditorDialogState extends State<EntryEditorDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        FilledButton(
-          onPressed: _submit,
-          child: const Text('Save'),
-        ),
+        FilledButton(onPressed: _submit, child: const Text('Save')),
       ],
     );
   }

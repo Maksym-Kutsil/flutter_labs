@@ -35,10 +35,7 @@ void main() {
         storage: storage,
       );
 
-      final user = await repo.login(
-        email: 'emily@example.com',
-        password: 'pw',
-      );
+      final user = await repo.login(email: 'emily@example.com', password: 'pw');
 
       expect(user, isNotNull);
       expect(user!.email, 'emily@example.com');
@@ -90,6 +87,5 @@ class _InMemoryStorage implements KeyValueStorage {
   Future<void> remove(String key) async => _store.remove(key);
 
   @override
-  Future<void> setString(String key, String value) async =>
-      _store[key] = value;
+  Future<void> setString(String key, String value) async => _store[key] = value;
 }

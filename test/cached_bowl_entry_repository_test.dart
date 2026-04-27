@@ -80,8 +80,7 @@ class _InMemoryStorage implements KeyValueStorage {
   Future<void> remove(String key) async => _store.remove(key);
 
   @override
-  Future<void> setString(String key, String value) async =>
-      _store[key] = value;
+  Future<void> setString(String key, String value) async => _store[key] = value;
 }
 
 class SocketLikeException implements Exception {

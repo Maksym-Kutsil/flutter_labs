@@ -1,74 +1,46 @@
 import 'package:flutter/material.dart';
-import 'package:my_project/application/services/bowl_entry_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:my_project/domain/models/bowl_entry.dart';
 import 'package:my_project/features/home/widgets/bowl_entry_tile.dart';
+import 'package:my_project/features/home/widgets/entry_editor_dialog.dart';
 import 'package:my_project/features/home/widgets/section_card.dart';
+import 'package:my_project/presentation/cubits/bowl_entries/bowl_entries_cubit.dart';
+import 'package:my_project/presentation/cubits/bowl_entries/bowl_entries_state.dart';
 
-/// Displays the list of bowl entries fetched from the [BowlEntryService].
-///
-/// Uses a [FutureBuilder] so loading and error states are handled
-/// declaratively. Pass a new [refreshToken] to force a refetch (the future
-/// is re-created whenever the token changes).
-class BowlEntriesSection extends StatefulWidget {
-  const BowlEntriesSection({
-    required this.bowlEntryService,
-    required this.refreshToken,
-    required this.onEdit,
-    required this.onDelete,
-    required this.onClear,
-    super.key,
-  });
-
-  final BowlEntryService bowlEntryService;
-  final Object refreshToken;
-  final ValueChanged<BowlEntry> onEdit;
-  final ValueChanged<String> onDelete;
-  final VoidCallback onClear;
-
-  @override
-  State<BowlEntriesSection> createState() => _BowlEntriesSectionState();
-}
-
-class _BowlEntriesSectionState extends State<BowlEntriesSection> {
-  late Future<List<BowlEntry>> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = widget.bowlEntryService.getEntries();
-  }
-
-  @override
-  void didUpdateWidget(covariant BowlEntriesSection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.refreshToken != widget.refreshToken) {
-      _future = widget.bowlEntryService.getEntries();
-    }
-  }
+/// Displays the list of bowl entries owned by [BowlEntriesCubit].
+class BowlEntriesSection extends StatelessWidget {
+  const BowlEntriesSection({super.key});
 
   @override
   Widget build(BuildContext context) {
     return SectionCard(
-      child: FutureBuilder<List<BowlEntry>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      child: BlocBuilder<BowlEntriesCubit, BowlEntriesState>(
+        builder: (context, state) {
+          if (state.status == BowlEntriesStatus.loading ||
+              state.status == BowlEntriesStatus.initial) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Center(child: CircularProgressIndicator()),
             );
           }
-          if (snapshot.hasError) {
-            return Text('Failed to load entries: ${snapshot.error}');
+          if (state.status == BowlEntriesStatus.error) {
+            return Text(state.errorMessage ?? 'Failed to load entries');
           }
-          final entries = snapshot.data ?? <BowlEntry>[];
-          return _buildContent(context, entries);
+          return _BowlEntriesList(entries: state.entries);
         },
       ),
     );
   }
+}
 
-  Widget _buildContent(BuildContext context, List<BowlEntry> entries) {
+class _BowlEntriesList extends StatelessWidget {
+  const _BowlEntriesList({required this.entries});
+
+  final List<BowlEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final cubit = context.read<BowlEntriesCubit>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -81,7 +53,7 @@ class _BowlEntriesSectionState extends State<BowlEntriesSection> {
               ),
             ),
             TextButton(
-              onPressed: entries.isEmpty ? null : widget.onClear,
+              onPressed: entries.isEmpty ? null : cubit.clearEntries,
               child: const Text('Delete all'),
             ),
           ],
@@ -90,19 +62,30 @@ class _BowlEntriesSectionState extends State<BowlEntriesSection> {
         if (entries.isEmpty)
           const Text('No entries yet. Tap + to add.')
         else
-          ...entries.map((entry) {
-            return Column(
+          ...entries.map(
+            (entry) => Column(
               children: [
                 BowlEntryTile(
                   entry: entry,
-                  onEdit: () => widget.onEdit(entry),
-                  onDelete: () => widget.onDelete(entry.id),
+                  onEdit: () => _editEntry(context, entry),
+                  onDelete: () => cubit.deleteEntry(entry.id),
                 ),
                 const Divider(height: 1),
               ],
-            );
-          }),
+            ),
+          ),
       ],
     );
+  }
+
+  Future<void> _editEntry(BuildContext context, BowlEntry entry) async {
+    final updated = await showDialog<BowlEntry>(
+      context: context,
+      builder: (_) => EntryEditorDialog(initialEntry: entry),
+    );
+    if (updated == null || !context.mounted) {
+      return;
+    }
+    await context.read<BowlEntriesCubit>().updateEntry(updated);
   }
 }

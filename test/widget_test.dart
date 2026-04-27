@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:my_project/app/my_app.dart';
 import 'package:my_project/application/services/auth_service.dart';
 import 'package:my_project/application/services/bowl_entry_service.dart';
 import 'package:my_project/application/services/connectivity_service.dart';
@@ -7,7 +8,6 @@ import 'package:my_project/domain/models/app_user.dart';
 import 'package:my_project/domain/models/bowl_entry.dart';
 import 'package:my_project/domain/repositories/auth_repository.dart';
 import 'package:my_project/domain/repositories/bowl_entry_repository.dart';
-import 'package:my_project/main.dart';
 
 void main() {
   testWidgets('Smart Pet Bowl shows login when no session exists', (

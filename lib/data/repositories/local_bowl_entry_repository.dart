@@ -56,9 +56,7 @@ class LocalBowlEntryRepository implements BowlEntryRepository {
   }
 
   Future<void> _saveEntries(List<BowlEntry> entries) async {
-    final encoded = jsonEncode(
-      entries.map((entry) => entry.toJson()).toList(),
-    );
+    final encoded = jsonEncode(entries.map((entry) => entry.toJson()).toList());
     await _storage.setString(_entriesKey, encoded);
   }
 }
