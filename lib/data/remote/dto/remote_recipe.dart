@@ -18,9 +18,7 @@ class RemoteRecipeMapper {
     return BowlEntry(
       id: '$id',
       title: name,
-      portionGrams: calories is int
-          ? calories
-          : int.tryParse('$calories') ?? 0,
+      portionGrams: calories is int ? calories : int.tryParse('$calories') ?? 0,
       note: note,
     );
   }

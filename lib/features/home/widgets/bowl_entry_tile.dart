@@ -17,13 +17,9 @@ class BowlEntryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        child: Text('${entry.portionGrams}g'),
-      ),
+      leading: CircleAvatar(child: Text('${entry.portionGrams}g')),
       title: Text(entry.title),
-      subtitle: Text(
-        entry.note.isEmpty ? 'No note' : entry.note,
-      ),
+      subtitle: Text(entry.note.isEmpty ? 'No note' : entry.note),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

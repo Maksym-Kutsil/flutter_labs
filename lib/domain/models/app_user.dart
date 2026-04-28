@@ -9,11 +9,7 @@ class AppUser {
   final String email;
   final String petName;
 
-  AppUser copyWith({
-    String? name,
-    String? email,
-    String? petName,
-  }) {
+  AppUser copyWith({String? name, String? email, String? petName}) {
     return AppUser(
       name: name ?? this.name,
       email: email ?? this.email,
@@ -22,11 +18,7 @@ class AppUser {
   }
 
   Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      'name': name,
-      'email': email,
-      'petName': petName,
-    };
+    return <String, dynamic>{'name': name, 'email': email, 'petName': petName};
   }
 
   factory AppUser.fromJson(Map<String, dynamic> json) {

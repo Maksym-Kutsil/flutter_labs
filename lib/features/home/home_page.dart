@@ -1,144 +1,65 @@
 import 'package:flutter/material.dart';
-import 'package:my_project/application/services/auth_service.dart';
-import 'package:my_project/application/services/bowl_entry_service.dart';
-import 'package:my_project/application/services/connectivity_service.dart';
-import 'package:my_project/application/services/mqtt_sensor_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:my_project/domain/models/app_user.dart';
 import 'package:my_project/domain/models/bowl_entry.dart';
-import 'package:my_project/features/home/home_actions.dart';
 import 'package:my_project/features/home/widgets/bowl_entries_section.dart';
+import 'package:my_project/features/home/widgets/entry_editor_dialog.dart';
+import 'package:my_project/features/home/widgets/home_app_bar.dart';
 import 'package:my_project/features/home/widgets/profile_summary_card.dart';
-import 'package:my_project/features/profile/profile_page.dart';
+import 'package:my_project/presentation/cubits/auth/auth_cubit.dart';
+import 'package:my_project/presentation/cubits/auth/auth_state.dart';
+import 'package:my_project/presentation/cubits/bowl_entries/bowl_entries_cubit.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({
-    required this.authService,
-    required this.bowlEntryService,
-    required this.connectivityService,
-    required this.mqttSensorService,
-    required this.user,
-    super.key,
-  });
-
-  final AuthService authService;
-  final BowlEntryService bowlEntryService;
-  final ConnectivityService connectivityService;
-  final MqttSensorService mqttSensorService;
-  final AppUser user;
-
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  late AppUser _user = widget.user;
-  late final HomeActions _actions = HomeActions(
-    authService: widget.authService,
-    bowlEntryService: widget.bowlEntryService,
-    connectivityService: widget.connectivityService,
-    mqttSensorService: widget.mqttSensorService,
-  );
-  Object _refreshToken = Object();
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthCubit>().state.user;
+    if (user == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Smart Bowl - ${_user.email}'),
-        actions: [
-          IconButton(
-            onPressed: _refreshEntries,
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Refresh from API',
-          ),
-          IconButton(
-            onPressed: _openEditProfile,
-            icon: const Icon(Icons.person_rounded),
-            tooltip: 'Edit profile',
-          ),
-          IconButton(
-            onPressed: _logout,
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Logout',
-          ),
-        ],
-      ),
+      appBar: HomeAppBar(email: user.email),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: [
-          ProfileSummaryCard(user: _user),
-          const SizedBox(height: 16),
-          BowlEntriesSection(
-            bowlEntryService: widget.bowlEntryService,
-            refreshToken: _refreshToken,
-            onEdit: _editEntry,
-            onDelete: _deleteEntry,
-            onClear: _clearEntries,
-          ),
+        children: const [
+          _ProfileSection(),
+          SizedBox(height: 16),
+          BowlEntriesSection(),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _addEntry,
+        onPressed: () => _addEntry(context),
         child: const Icon(Icons.add_rounded),
       ),
     );
   }
 
-  void _refreshEntries() {
-    setState(() {
-      _refreshToken = Object();
-    });
-  }
-
-  Future<void> _addEntry() async {
-    final created = await _actions.showEntryDialog(context);
-    if (created == null) {
-      return;
-    }
-    await widget.bowlEntryService.addEntry(created);
-    _refreshEntries();
-  }
-
-  Future<void> _editEntry(BowlEntry entry) async {
-    final updated = await _actions.showEntryDialog(
-      context,
-      initialEntry: entry,
+  Future<void> _addEntry(BuildContext context) async {
+    final created = await showDialog<BowlEntry>(
+      context: context,
+      builder: (_) => const EntryEditorDialog(),
     );
-    if (updated == null) {
+    if (created == null || !context.mounted) {
       return;
     }
-    await widget.bowlEntryService.updateEntry(updated);
-    _refreshEntries();
+    await context.read<BowlEntriesCubit>().addEntry(created);
   }
+}
 
-  Future<void> _deleteEntry(String id) async {
-    await widget.bowlEntryService.deleteEntry(id);
-    _refreshEntries();
-  }
+class _ProfileSection extends StatelessWidget {
+  const _ProfileSection();
 
-  Future<void> _clearEntries() async {
-    await widget.bowlEntryService.clearEntries();
-    _refreshEntries();
-  }
-
-  Future<void> _openEditProfile() async {
-    final updated = await Navigator.of(context).push<AppUser>(
-      MaterialPageRoute<AppUser>(
-        builder: (context) =>
-            ProfilePage(authService: widget.authService, user: _user),
-      ),
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthCubit, AuthState>(
+      buildWhen: (previous, current) => previous.user != current.user,
+      builder: (context, state) {
+        final user =
+            state.user ?? const AppUser(name: '', email: '', petName: '');
+        return ProfileSummaryCard(user: user);
+      },
     );
-    if (!mounted || updated == null) {
-      return;
-    }
-    setState(() => _user = updated);
-  }
-
-  Future<void> _logout() async {
-    final confirmed = await _actions.confirmLogout(context);
-    if (!confirmed || !mounted) {
-      return;
-    }
-    await _actions.performLogout(context);
   }
 }

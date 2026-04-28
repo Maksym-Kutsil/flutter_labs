@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 
 class PetBowlSectionHeader extends StatelessWidget {
-  const PetBowlSectionHeader({
-    required this.title,
-    this.subtitle,
-    super.key,
-  });
+  const PetBowlSectionHeader({required this.title, this.subtitle, super.key});
 
   final String title;
   final String? subtitle;
