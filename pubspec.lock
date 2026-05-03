@@ -142,10 +142,10 @@ packages:
     description:
       path: "."
       ref: main
-      resolved-ref: b956359b888f4319a14922e60440d808f6fd7497
+      resolved-ref: "9b581f8b0e149492647ca97a3380df52e8e6e42d"
       url: "https://github.com/Maksym-Kutsil/flashlight_plugin.git"
     source: git
-    version: "0.1.0"
+    version: "0.1.1"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -495,5 +495,5 @@ packages:
     source: hosted
     version: "6.6.1"
 sdks:
-  dart: ">=3.11.1 <4.0.0"
+  dart: ">=3.11.0 <4.0.0"
   flutter: ">=3.35.0"
