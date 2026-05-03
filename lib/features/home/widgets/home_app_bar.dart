@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:my_project/features/auth/login_page.dart';
+import 'package:my_project/features/home/flashlight_actions.dart';
 import 'package:my_project/features/profile/profile_page.dart';
 import 'package:my_project/presentation/cubits/auth/auth_cubit.dart';
 import 'package:my_project/presentation/cubits/bowl_entries/bowl_entries_cubit.dart';
 
-class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
+class HomeAppBar extends StatefulWidget implements PreferredSizeWidget {
   const HomeAppBar({required this.email, super.key});
 
   final String email;
@@ -14,9 +15,41 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   @override
+  State<HomeAppBar> createState() => _HomeAppBarState();
+}
+
+class _HomeAppBarState extends State<HomeAppBar> {
+  static const int _secretTapsRequired = 5;
+  static const Duration _secretTapWindow = Duration(milliseconds: 1500);
+
+  int _tapCount = 0;
+  DateTime? _firstTapAt;
+
+  void _onTitleTap() {
+    final now = DateTime.now();
+    final firstTap = _firstTapAt;
+    if (firstTap == null || now.difference(firstTap) > _secretTapWindow) {
+      _firstTapAt = now;
+      _tapCount = 1;
+      return;
+    }
+    _tapCount += 1;
+    if (_tapCount < _secretTapsRequired) {
+      return;
+    }
+    _tapCount = 0;
+    _firstTapAt = null;
+    FlashlightActions.secretToggle(context);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AppBar(
-      title: Text('Smart Bowl - $email'),
+      title: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _onTitleTap,
+        child: Text('Smart Bowl - ${widget.email}'),
+      ),
       actions: [
         IconButton(
           onPressed: () => context.read<BowlEntriesCubit>().load(),
